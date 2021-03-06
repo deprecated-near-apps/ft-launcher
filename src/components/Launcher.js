@@ -14,6 +14,10 @@ import {
 } from '../utils/near-utils';
 import BN from 'bn.js';
 
+import {GUEST_ACCOUNTS} from './Guest'
+const TEMP_OWNER = '__TEMP_OWNER';
+const TEMP_GUEST = '__TEMP_GUEST';
+
 const {
 	KeyPair,
 	Account,
@@ -25,12 +29,15 @@ const {
 const nameSuffix = '.testnet';
 const namingContractName = 'testnet';
 
-const TEMP_OWNER = '__TEMP_OWNER';
-const TEMP_GUEST = '__TEMP_GUEST';
 
 export const Launcher = ({ near, update, account, deployedToken, guestsAccount }) => {
 
 	if (!account) return null;
+
+	const [totalSupply, setTotalSupply] = useState('');
+	const [symbol, setSymbol] = useState('');
+	const [name, setName] = useState('');
+	const [accountId, setAccountId] = useState('');
 
 	useEffect(() => {
 		const data = get(TEMP_OWNER);
@@ -74,10 +81,8 @@ export const Launcher = ({ near, update, account, deployedToken, guestsAccount }
 			});
 		}
 
-
-
 		update('loading', true);
-		const contractBytes = new Uint8Array(await fetch('ft.wasm').then((res) => res.arrayBuffer()));
+		const contractBytes = new Uint8Array(await fetch('main.wasm').then((res) => res.arrayBuffer()));
 		const newArgs = {
 			owner_id: account.accountId,
 			total_supply: parseNearAmount(totalSupply),
@@ -96,11 +101,6 @@ export const Launcher = ({ near, update, account, deployedToken, guestsAccount }
 		account.signAndSendTransaction(accountId, actions);
 		update('loading', false);
 	};
-
-	const [totalSupply, setTotalSupply] = useState('');
-	const [symbol, setSymbol] = useState('');
-	const [name, setName] = useState('');
-	const [accountId, setAccountId] = useState('');
 
 	const handleLaunch = async () => {
 		if (!name.length || !accountId.length || !symbol.length || !totalSupply.length) {
@@ -176,6 +176,8 @@ export const Launcher = ({ near, update, account, deployedToken, guestsAccount }
 					<button onClick={() => {
 						del(TEMP_OWNER);
 						del(TEMP_GUEST);
+						del(GUEST_ACCOUNTS);
+                        window.location.reload()
 					}}>Delete Token</button>
 				</>
 		}

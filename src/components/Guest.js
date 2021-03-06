@@ -7,10 +7,10 @@ import {
     setSignerFromSeed,
     GAS,
     isAccountTaken,
-    tokenMethods,
+    contractMethods,
 } from '../utils/near-utils';
 
-const GUEST_ACCOUNTS = '__GUEST_ACCOUNTS';
+export const GUEST_ACCOUNTS = '__GUEST_ACCOUNTS';
 
 const {
     KeyPair, Account, Contract,
@@ -62,7 +62,7 @@ export const Guest = ({
         setSignerFromSeed(guestsAccount.accountId, guestsAccount.seedPhrase)
 
         try {
-            await guestAccount.addKey(publicKey, tokenAccount.accountId, tokenMethods.changeMethods, parseNearAmount('0.1'));
+            await guestAccount.addKey(publicKey, tokenAccount.accountId, contractMethods.changeMethods, parseNearAmount('0.1'));
             await tokenAccount.functionCall(deployedToken.accountId, 'add_guest', { account_id: accountId, public_key: publicKey }, GAS);
             const guest = { accountId, publicKey, seedPhrase, created: Date.now() };
             guests.push(guest);
@@ -136,7 +136,7 @@ export const Guest = ({
             await guestAccount.functionCall(deployedToken.accountId, 'upgrade_guest', {
                 public_key,
                 access_key: accessPublic,
-                method_names: tokenMethods.changeMethods.join(',')
+                method_names: contractMethods.changeMethods.join(',')
             }, GAS);
 
             /// wallet hijacking

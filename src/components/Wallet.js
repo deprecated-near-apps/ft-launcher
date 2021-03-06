@@ -17,6 +17,7 @@ export const Wallet = ({ wallet, account, update, deployedToken }) => {
     }, [account, deployedToken])
 
     const updateWallet = async () => {
+        console.log(await account.viewFunction(deployedToken.accountId, 'ft_balance_of', { account_id: account.accountId }))
         setTokenBalance(formatNearAmount(await account.viewFunction(deployedToken.accountId, 'ft_balance_of', { account_id: account.accountId }) || '0'));
     }
 

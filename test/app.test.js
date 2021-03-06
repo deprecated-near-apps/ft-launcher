@@ -16,16 +16,11 @@ const {
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 50000;
 
 /// token stuff
-const guestId = 'guests.' + contractName;
-const tokenId = 'token.' + contractAccount.accountId;
+const guestId = 'guests.' + contractAccount.accountId;
 const total_supply = parseNearAmount('1000000000');
 
-const tokenMethods = {
-	changeMethods: ['add_guest', 'upgrade_guest', 'get_predecessor', 'ft_transfer', 'ft_transfer_guest', 'storage_deposit'],
-	viewMethods: ['ft_balance_of', 'storage_minimum_balance', 'get_guest'],
-};
 const getTokenContract = (account, token_account_id) => {
-	return new Contract(account, token_account_id, tokenMethods);
+	return new Contract(account, token_account_id, contractMethods);
 };
 
 
@@ -38,23 +33,7 @@ describe('deploy contract ' + contractName, () => {
 	beforeAll(async () => {
 	    const { contract: launchContract } = await initContract();
 
-		try {
-			await launchContract.create_token({
-				token_account_id: tokenId,
-				owner_id: contractAccount.accountId,
-				total_supply,
-				version: '1',
-				name: 'dope-token-launcher',
-				symbol: 'DTL',
-				reference: 'https://github.com/near/core-contracts/tree/master/w-near-141',
-				reference_hash: '7c879fa7b49901d0ecc6ff5d64d7f673da5e4a5eb52a8d50a214175760d8919a',
-				decimals: 24
-			}, GAS, MIN_ATTACHED_BALANCE);
-		} catch (e) {
-			if (!/because it already exists/.test(e.toString())) {
-				throw e;
-			}
-		}
+        const tokenId = contractAccount.accountId
 
 		/// contract is the token contract now and contractAccount is the owner
 		contract = await getTokenContract(contractAccount, tokenId);
@@ -69,7 +48,7 @@ describe('deploy contract ' + contractName, () => {
 		const keyPair = KeyPair.fromRandom('ed25519');
 		const public_key = keyPair.publicKey.toString();
 		const guestAccount = await createOrInitAccount(guestId, GUESTS_ACCOUNT_SECRET);
-		await guestAccount.addKey(public_key, tokenId, tokenMethods.changeMethods, parseNearAmount('0.1'));
+		await guestAccount.addKey(public_key, tokenId, contractMethods.changeMethods, parseNearAmount('0.1'));
 		try {
 			await contract.add_guest({ account_id: bobId, public_key }, GAS);
 		} catch(e) {
@@ -77,9 +56,7 @@ describe('deploy contract ' + contractName, () => {
 		}
 		connection.signer.keyStore.setKey(networkId, guestId, keyPair);
 		contractBob = getTokenContract(guestAccount, tokenId);
-
 		const guest = await contract.get_guest({ public_key });
-
 		console.log(guest);
 	});
 

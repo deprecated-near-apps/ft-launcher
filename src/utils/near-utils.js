@@ -6,7 +6,7 @@ export const {
 	GAS,
 	MIN_ATTACHED_BALANCE,
 	networkId, nodeUrl, walletUrl, nameSuffix,
-	contractName, contractMethods, tokenMethods
+	contractName, contractMethods
 } = getConfig();
 
 const {

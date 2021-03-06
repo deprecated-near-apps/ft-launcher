@@ -1,7 +1,7 @@
 const fs = require('fs');
 const nearAPI = require('near-api-js');
 const getConfig = require('../src/config');
-const { nodeUrl, networkId, contractName, contractMethods, tokenMethods } = getConfig(true);
+const { nodeUrl, networkId, contractName, contractMethods } = getConfig(true);
 const {
 	keyStores: { InMemoryKeyStore },
 	Near, Account, Contract, KeyPair,
@@ -31,5 +31,5 @@ module.exports = {
 	contract,
 	contractName,
 	contractAccount,
-	tokenMethods,
+	contractMethods,
 };

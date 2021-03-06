@@ -13,7 +13,18 @@ const {
 async function initContract() {
 	/// try to call new on contract, swallow e if already initialized
 	try {
-		await contract.new({ owner_id: contractName });
+        const newArgs = {
+			owner_id: contractAccount.accountId,
+			total_supply: parseNearAmount('1000000'),
+			name: 'Test',
+			symbol: 'TEST',
+			// not set by user
+			version: '1',
+			reference: 'https://github.com/near/core-contracts/tree/master/w-near-141',
+			reference_hash: '7c879fa7b49901d0ecc6ff5d64d7f673da5e4a5eb52a8d50a214175760d8919a',
+			decimals: 24
+		};
+		await contract.new(newArgs);
 	} catch (e) {
 		if (!/initialized/.test(e.toString())) {
 			throw e;
