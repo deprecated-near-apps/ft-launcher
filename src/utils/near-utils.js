@@ -1,24 +1,35 @@
 import getConfig from '../config';
 import * as nearAPI from 'near-api-js';
+import { generateSeedPhrase, parseSeedPhrase } from 'near-seed-phrase';
 
 export const {
 	GAS,
+	MIN_ATTACHED_BALANCE,
 	networkId, nodeUrl, walletUrl, nameSuffix,
-	contractName, contractMethods
+	contractName, contractMethods, tokenMethods
 } = getConfig();
 
 const {
 	Account,
+    KeyPair,
 	Contract,
 	InMemorySigner,
 } = nearAPI;
+
+let near
 
 export function getContract(account) {
 	return new Contract(account, contractName, { ...contractMethods });
 }
 
+export const setSignerFromSeed = async (accountId, seedPhrase) => {
+    const { secretKey } = parseSeedPhrase(seedPhrase);
+    const keyPair = KeyPair.fromString(secretKey);
+    near.connection.signer.keyStore.setKey(networkId, accountId, keyPair);
+}
+
 export const getWallet = async () => {
-	const near = await nearAPI.connect({
+	near = await nearAPI.connect({
 		networkId, nodeUrl, walletUrl, deps: { keyStore: new nearAPI.keyStores.BrowserLocalStorageKeyStore() },
 	});
 	const wallet = new nearAPI.WalletAccount(near);
@@ -53,7 +64,19 @@ export const postJson = async ({ url, data = {} }) => {
 		method: 'POST',
 		headers: new Headers({ 'content-type': 'application/json' }),
 		body: JSON.stringify({ ...data })
-	}).then((res) => res.json());
+	}).then(async (res) => {
+		if (!res.ok) {
+			throw await res.json();
+		}
+		return res.json();
+	});
+};
+
+export const createGuestAccount = (near, key) => {
+	key.toString = () => key.secretKey;
+	near.connection.signer.keyStore.setKey(networkId, 'guests.' + contractName, key);
+	const account = new Account(near.connection, 'guests.' + contractName);
+	return account;
 };
 
 export const createAccessKeyAccount = (near, key) => {
@@ -61,6 +84,19 @@ export const createAccessKeyAccount = (near, key) => {
 	near.connection.signer.keyStore.setKey(networkId, contractName, key);
 	const account = new Account(near.connection, contractName);
 	return account;
+};
+
+export const isAccountTaken = async (near, accountId) => {
+	const account = new nearAPI.Account(near.connection, accountId);
+	try {
+		await account.state();
+		return true;
+	} catch (e) {
+		if (!/does not exist/.test(e.toString())) {
+			throw e;
+		}
+	}
+	return false;
 };
 
 /********************************
@@ -81,22 +117,7 @@ export const hasKey = async (near, accountId, publicKey) => {
 	return false;
 };
 
-export const isAccountTaken = async (near, accountId) => {
-	if (accountId.indexOf(nameSuffix) > -1) {
-		return true;
-	}
-	accountId = accountId + nameSuffix;
-	const account = new nearAPI.Account(near.connection, accountId);
-	try {
-		await account.state();
-		return true;
-	} catch (e) {
-		if (!/does not exist/.test(e.toString())) {
-			throw e;
-		}
-	}
-	return false;
-};
+
 
 export const getContractSigner = async ({ keyPair }) => {
 	const signer = await InMemorySigner.fromKeyPair(networkId, contractName, keyPair);

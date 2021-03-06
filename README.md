@@ -1,29 +1,30 @@
-# Live App Review 1 - App Access Keys
+# Live App Review 13 - Social Token Drops with NO WALLET
 
 This repo is a companion to this video:
 
-[![Live App Review 1 - App Access Keys](https://img.youtube.com/vi/dT99JLpO2Q8/0.jpg)](https://www.youtube.com/watch?v=dT99JLpO2Q8)
+[![Live App Review 1 - App Access Keys](https://img.youtube.com/vi/7rG8fLAOepE/0.jpg)](https://www.youtube.com/watch?v=7rG8fLAOepE)
 
 
-# Feedback (TODO)
+## NOTE WIP: Server Side APIs and Tests
+# Background
 
-Will there be an option to test / run app against a contract that is long lived on testnet?
-Use case: shared data sets, more testability, better starting point
-Separate script for shared namespace
+One of the issues with Social Tokens is that they start with zero value. A creator, artist or community might want to drop a bunch of tokens to their fans but the audience has (1) no crypto to pay for fees (2) no wallet (3) no concept of crypto or blockchain; prior to the drop. 
 
-Server should include warning if config loaded is not current dev account, ping dev folder and crash and restart
+So let's solve these issues by dropping tokens to users in the traditional Web2 way!
 
-Step by step high level (matching what's in the frontend)
+We do a demo of creating a "guest" named account for an app where the gas fees are sponsored by a special app account called "guests.APP_NAME.near". The guest account doesn't exist (sometimes called a virtual or contract account) until the user decides to swap their tokens and upgrade to a real account. Until then their name is reserved because only the app is able to create "USERNAME.APP_NAME.near".
 
-Better installation guide / step by
+This has many advantages for user onboarding, where users can use the app immediately and later can be upgraded to a full account. The users also don't have to move any assets - namely the fungible tokens they earned as a guest user. 
 
-Question: why create brand new dev accounts every time? Why not have a consistent namespace for your app? Destroy / RE-create same name.
-Answer: dev accounts for rapid iteration, then deploy to serious name (accidental deploy over existing account?)
+# Quickstart
 
-Kitchen Sink
-npm library for near dev build scripts and utils???
+1. Start the server: `cd server && yarn && yarn start`
+2. (back in root dir) Deploy the contract and run the app test: `yarn test:deploy`
+3. Start the app: `yarn start`
 
-
+If you only change the JS tests use `yarn test`.
+If you change the contract run `yarn test:deploy` again.
+Server should restart automatically, but you may need to restart the app.
 ## Installation
 
 Beyond having npm and node (latest versions), you should have Rust installed. I recommend nightly because living on the edge is fun.

@@ -2,7 +2,7 @@
 const nacl = require('tweetnacl');
 const crypto = require('crypto');
 const bs58 = require('bs58');
-const { near, connection, contractAccount } = require('../utils/near-utils');
+const { near, connection, contract, contractAccount, guestAccount } = require('../utils/near-utils');
 
 const withNear = () => (req, res, next) => {
 	req.near = near;
@@ -59,7 +59,9 @@ const hasAccessKey = async (req, res, next) => {
 };
 
 module.exports = {
+	contract, 
 	contractAccount,
 	withNear,
 	hasAccessKey,
+	guestAccount,
 };

@@ -1,3 +1,4 @@
+
 /**
 * Fungible Token NEP-141 Token contract
 *
@@ -11,8 +12,8 @@
 */
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
-use near_sdk::json_types::{U128, ValidAccountId};
-use near_sdk::{env, near_bindgen, AccountId, Balance, Promise, StorageUsage};
+use near_sdk::json_types::{U128, ValidAccountId, Base58PublicKey};
+use near_sdk::{env, ext_contract, near_bindgen, AccountId, PublicKey, Balance, Promise, PromiseResult, StorageUsage};
 
 pub use crate::fungible_token_core::*;
 pub use crate::fungible_token_metadata::*;
@@ -26,12 +27,26 @@ mod fungible_token_metadata;
 mod internal;
 mod storage_manager;
 
+const ON_CREATE_ACCOUNT_CALLBACK_GAS: u64 = 20_000_000_000_000;
+const ACCESS_KEY_ALLOWANCE: u128 = 100_000_000_000_000_000_000_000;
+const SPONSOR_FEE: u128 = 100_000_000_000_000_000_000_000;
+const FUNDING_AMOUNT: u128 = 500_000_000_000_000_000_000_000;
+const NO_DEPOSIT: Balance = 0;
+/// 100 tokens if 24decimals (like NEAR)
+const DROP_DEFAULT: u128 = 100_000_000_000_000_000_000_000_000;
+
 #[global_allocator]
 static ALLOC: near_sdk::wee_alloc::WeeAlloc<'_> = near_sdk::wee_alloc::WeeAlloc::INIT;
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Contract {
+    pub owner_id: AccountId,
+    pub drop_amount: Balance,
+
+    /// PublicKey -> AccountId.
+    pub guests: LookupMap<PublicKey, AccountId>,
+
     /// AccountID -> Account balance.
     pub accounts: LookupMap<AccountId, Balance>,
 
@@ -62,6 +77,9 @@ impl Contract {
         let ref_hash_fixed_bytes: [u8; 32] = ref_hash_result.unwrap().as_slice().try_into().unwrap();
 
         let mut this = Self {
+            owner_id: owner_id.clone().into(),
+            drop_amount: DROP_DEFAULT,
+            guests: LookupMap::new(b"g".to_vec()),
             accounts: LookupMap::new(b"a".to_vec()),
             total_supply: total_supply.into(),
             account_storage_usage: 0,
@@ -85,7 +103,134 @@ impl Contract {
         this.accounts.insert(&owner_id.as_ref(), &total_supply_u128);
         this
     }
+
+    /// Custom Methods for Social Token Drops
+
+    /// looks for guest key in custom guests.CONTRACT_ACCOUNT_ID sub account
+    pub fn get_predecessor(&mut self) -> AccountId {
+        let predecessor = env::predecessor_account_id();
+        let (first, last) = predecessor.split_once(".").unwrap();
+        if first == "guests" && last == self.owner_id {
+            self.guests.get(&env::signer_account_pk()).expect("not a guest")
+        } else {
+            predecessor
+        }
+    }
+
+    /// add account_id to guests for get_predecessor and to storage to receive tokens
+    /// only the owner / backend API should be able to do this to avoid unwanted storage usage in creating new guest records
+    pub fn add_guest(&mut self, account_id: AccountId, public_key: Base58PublicKey) {
+        assert!(env::predecessor_account_id() == self.owner_id, "must be owner_id");
+        if self.accounts.insert(&account_id, &0).is_some() {
+            env::panic(b"The account is already registered");
+        }
+        if self.guests.insert(&public_key.into(), &account_id).is_some() {
+            env::panic(b"guest account already added");
+        }
+    }
+
+    pub fn update_drop_amount(&mut self, amount: U128) {
+        assert!(env::predecessor_account_id() == self.owner_id, "must be owner_id");
+        self.drop_amount = amount.into();
+    }
+
+    /// transfer doesn't require 1 yocto - guests do not have NEAR
+    pub fn ft_transfer_guest(&mut self, receiver_id: ValidAccountId, amount: U128, memo: Option<String>) {
+        let sender_id = self.get_predecessor();
+        let amount = amount.into();
+        let balance = self.ft_balance_of(receiver_id.clone()).into();
+        assert!(amount < balance, "cannot transfer max balance");
+        self.internal_transfer(&sender_id, receiver_id.as_ref(), amount, memo);
+    }
+
+    pub fn claim_drop(&mut self) {
+        let receiver_id:ValidAccountId = self.guests.get(&env::signer_account_pk()).expect("not a guest").try_into().unwrap();
+        let balance:u128 = self.ft_balance_of(receiver_id.clone()).into();
+        assert!(balance == 0, "already claimed");
+        let amount = self.drop_amount.into();
+        self.internal_transfer(&self.owner_id.clone().into(), &receiver_id.into(), amount, None);
+    }
+    
+    /// 
+    pub fn remove_guest(&mut self, public_key: Base58PublicKey) {
+        assert!(env::predecessor_account_id() == self.owner_id, "must be owner_id");
+        let account_id = self.guests.get(&public_key.clone().into()).expect("not a guest");
+        let amount = self.accounts.get(&account_id).unwrap_or(0);
+        self.internal_transfer(&account_id, &self.owner_id.clone().into(), amount, None);
+        self.accounts.remove(&account_id);
+        self.guests.remove(&public_key.into());
+    }
+
+    /// user wants to become a real NEAR account
+    pub fn upgrade_guest(&mut self,
+        public_key: Base58PublicKey,
+        access_key: Base58PublicKey,
+        method_names: String
+    ) -> Promise {
+        let pk = env::signer_account_pk();
+        let account_id = self.guests.get(&pk).expect("not a guest");
+        let amount = self.accounts.get(&account_id).expect("no balance");
+        let fees = SPONSOR_FEE + FUNDING_AMOUNT + u128::from(self.storage_minimum_balance());
+        assert!(amount > fees, "not enough to upgrade and pay fees");
+        self.internal_withdraw(&account_id, fees);
+        env::log(format!("Withdraw {} NEAR from {}", amount, account_id).as_bytes());
+        // create the guest account
+        // transfer FUNDING_AMOUNT in NEAR to the new account
+        // remaining tokens belongs to user
+        Promise::new(account_id.clone())
+            .create_account()
+            .add_full_access_key(public_key.into())
+            .add_access_key(
+                access_key.into(),
+                ACCESS_KEY_ALLOWANCE,
+                env::current_account_id(),
+                method_names.as_bytes().to_vec(),
+            )
+            .transfer(FUNDING_AMOUNT)
+            .then(ext_self::on_account_created(
+                account_id,
+                pk,
+                
+                &env::current_account_id(),
+                NO_DEPOSIT,
+                ON_CREATE_ACCOUNT_CALLBACK_GAS,
+            ))
+    }
+
+    /// after the account is created we'll delete all the guests activity
+    pub fn on_account_created(&mut self, account_id: AccountId, public_key: PublicKey) -> bool {
+        let creation_succeeded = is_promise_success();
+        if creation_succeeded {
+            self.guests.remove(&public_key);
+        }
+        creation_succeeded
+    }
+
+    /// view methods
+    pub fn get_guest(&self, public_key: Base58PublicKey) -> AccountId {
+        self.guests.get(&public_key.into()).expect("no guest")
+    }
+
 }
+
+/// Callback for after upgrade_guest
+#[ext_contract(ext_self)]
+pub trait ExtContract {
+    fn on_account_created(&mut self, account_id: AccountId, public_key: PublicKey) -> bool;
+}
+
+fn is_promise_success() -> bool {
+    assert_eq!(
+        env::promise_results_count(),
+        1,
+        "Contract expected a result on the callback"
+    );
+    match env::promise_result(0) {
+        PromiseResult::Successful(_) => true,
+        _ => false,
+    }
+}
+
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]

@@ -4,42 +4,74 @@ import { appStore, onAppMount } from './state/app';
 
 import { Wallet } from './components/Wallet';
 import { Contract } from './components/Contract';
-import { Keys } from './components/Keys';
+import { Guest } from './components/Guest';
+import { Launcher } from './components/Launcher';
+import { MakeProposal } from './components/MakeProposal';
+import NearLogo from 'url:./img/near_icon.svg';
 
-import './App.css';
+import './App.scss';
 
 const App = () => {
-    const { state, dispatch, update } = useContext(appStore);
+	const { state, dispatch, update } = useContext(appStore);
 
-    const { near, wallet, account, localKeys, loading } = state;
+	const { 
+		loading, tabIndex,
+		near, wallet, account,
+		guests,
 
-    const onMount = () => {
-        dispatch(onAppMount());
-    };
-    useEffect(onMount, []);
+		deployedToken, guestsAccount
+	} = state;
 
-    if (loading) {
-        return <div className="root">
-            <h3>Workin on it!</h3>
-        </div>;
-    }
+	const onMount = () => {
+		dispatch(onAppMount());
+	};
+	useEffect(onMount, []);
 
-    return (
-        <div className="root">
-            <h2>1. Guest Accounts</h2>
-            <p>Set up a guest account (seed phrase + implicitAccountId) and you will also receive an access key that is added to the "contract account".</p>
-            <Keys {...{ near, update, localKeys }} />
-            <Contract {...{ near, update, localKeys, wallet, account }} />
+	if (loading) {
+		return <div className="loading">
+			<img src={NearLogo} />
+		</div>;
+	}
 
-            {
-                localKeys && <>
-                    <h2>3. Sign In with NEAR Wallet</h2>
-                    <p>Sign in with a wallet that already has NEAR tokens, and you will be presented above with an option to purchase the message created by the guest account.</p>
-                    <Wallet {...{ wallet, account }} />
-                </>
-            }
-        </div>
-    );
+	return (
+		<div className="root">
+
+			<div className="tab-controls">
+				{
+					['Wallet', 'Launch', 'Drop'].map((str, i) => 
+						<div key={i}
+							className={tabIndex === i ? 'active' : ''}
+							onClick={() => update('tabIndex', i)}
+						>{str}</div>
+					)
+				}
+			</div>
+
+			<div className={['tab', tabIndex === 0 ? 'active' : ''].join(' ')}>
+                
+				{ !account && <>
+					<h2>Sign In with NEAR Wallet</h2>
+					<p>Sign in with a wallet that already has NEAR tokens, and you will be presented with an option to purchase tokens you can then fund proposals with.</p>
+				</>}
+				<Wallet {...{ wallet, account, update, deployedToken }} />
+
+			</div>
+			<div className={['tab', tabIndex === 1 ? 'active' : ''].join(' ')}>
+
+				<Launcher {...{ near, update, account, deployedToken, guestsAccount }} />
+
+			</div>
+			<div className={['tab', tabIndex === 2 ? 'active' : ''].join(' ')}>
+
+				<Guest {...{
+					near, update,
+					deployedToken, guestsAccount, guests
+				}} />
+
+			</div>
+			
+		</div>
+	);
 };
 
 export default App;

@@ -1,122 +1,105 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import * as nearAPI from 'near-api-js';
-import { GAS, parseNearAmount } from '../state/near';
-import { 
-	createAccessKeyAccount,
+import { GAS, formatNearAmount, parseNearAmount } from '../state/near';
+import {
+	contractName,
 	getContract,
 } from '../utils/near-utils';
+import BN from 'bn.js';
 
-const {
-	KeyPair,
-	utils: { format: { formatNearAmount } }
-} = nearAPI;
+export const Contract = ({ update, account, tokenBalance = '0' }) => {
 
-export const Contract = ({ near, update, localKeys = {}, account }) => {
-	if (!localKeys || !localKeys.accessPublic) return null;
-
-	const [message, setMessage] = useState('');
 	const [amount, setAmount] = useState('');
-	const [messageForSale, setMessageForSale] = useState();
-	const [purchaseKey, setPurchaseKey] = useState('');
-    
+	const [receiver, setReceiver] = useState('');
+	const [transferAmount, setTransferAmount] = useState('');
+
 	useEffect(() => {
-		if (!localKeys.accessPublic) return;
-		loadMessage();
-	}, [localKeys.accessPublic]);
+		if (!account) return;
+		loadWalletBalances();
+	}, [account]);
 
-
-	const loadMessage = async () => {
-		const contract = getContract(createAccessKeyAccount(near, KeyPair.fromString(localKeys.accessSecret)));
-		try {
-			const result = await contract.get_message({ public_key: localKeys.accessPublic });
-			result.amount = formatNearAmount(result.amount, 2);
-			console.log(result);
-			setMessageForSale(result);
-			setPurchaseKey(localKeys.accessPublic);
-		} catch (e) {
-			if (!/No message/.test(e.toString())) {
-				throw e;
-			}
-		}
+	const loadWalletBalances = async () => {
+		const contract = getContract(account);
+		const storageBalance = await contract.storage_balance_of({ account_id: account.accountId });
+		// console.log('token storage wallet:', storageBalance);
+		const tokenBalance = await contract.ft_balance_of({ account_id: account.accountId });
+		update('tokenBalance', tokenBalance);
 	};
 
-	const handleCreateMessage = async () => {
-		if (!message.length || !amount.length) {
-			alert('Please enter a message and amount!');
+	const handleBuyTokens = async () => {
+		if (!amount.length) {
+			alert('Please enter amount!');
 			return;
 		}
-		update('loading', true);
-		const appAccount = createAccessKeyAccount(near, KeyPair.fromString(localKeys.accessSecret));
-		const contract = getContract(appAccount);
-		await contract.create({
-			message,
-			amount: parseNearAmount(amount),
-			owner: localKeys.accountId
-		}, GAS);
-		await loadMessage();
-		update('loading', false);
-	};
-
-	const handleBuyMessage = async () => {
-		if (!purchaseKey.length) {
-			alert('Please enter an app key selling a message');
-			return;
-		}
+		let purchaseAmount = parseNearAmount(amount);
 		update('loading', true);
 		const contract = getContract(account);
-		let result;
-		try {
-			result = await contract.get_message({ public_key: purchaseKey });
-		} catch (e) {
-			if (!/No message/.test(e.toString())) {
-				throw e;
+		const storageBalance = await contract.storage_balance_of({ account_id: account.accountId });
+		const storageMinimum = await contract.storage_minimum_balance();
+		if (storageBalance.total === '0' && window.confirm(`add ${formatNearAmount(storageMinimum, 6)} extra NEAR for storage?`)) {
+			purchaseAmount = new BN(purchaseAmount).add(new BN(storageMinimum)).toString();
+			try {
+				await contract.near_deposit_with_storage({}, GAS, purchaseAmount);
+			} catch (e) {
+				console.warn(e);
 			}
-			alert('Please enter an app key selling a message');
-			update('loading', false);
+			return update('loading', false);
+		}
+		try {
+			await contract.near_deposit({}, GAS, purchaseAmount);
+		} catch (e) {
+			console.warn(e);
+		}
+		return update('loading', false);
+	};
+
+	const handleTransferTokens = async () => {
+		if (!transferAmount.length || !receiver.length) {
+			alert('Please enter amount and receiver!');
 			return;
 		}
-		if (!window.confirm(`Purchase message: "${result.message}" for ${formatNearAmount(result.amount, 2)} N ?`)) {
-			update('loading', false);
-			return;
+		update('loading', true);
+		// const appAccount = createAccessKeyAccount(near, KeyPair.fromString(localKeys.accessSecret));
+		const contract = getContract(account);
+		try {
+			await contract[receiver === contractName ? 'ft_transfer_call' : 'ft_transfer']({
+				receiver_id: receiver,
+				amount: parseNearAmount(transferAmount),
+				msg: ''
+			}, GAS, 1);
+		} catch (e) {
+			console.warn(e);
 		}
-		const purchasedMessage = await contract.purchase({ public_key: purchaseKey }, GAS, result.amount);
-		console.log(purchasedMessage);
-		await loadMessage();
 		update('loading', false);
 	};
 
 	return <>
 		{
-			messageForSale ?
-				<>
-					<h2>2b. Message is Posted for Sale</h2>
-					<p><b>Key:</b> { localKeys.accessPublic }</p>
-					<p><b>Message:</b> { messageForSale.message }</p>
-					<p><b>Amount:</b> { messageForSale.amount }</p>
-				</> :
-				<>
-					<h2>2. Sell a Message</h2>
-                    <p>Using your implicitAccountId + app key (different keyPair), create a message (string) with a price in NEAR tokens to be sold.</p>
-					{/* <p>Selling Account Id: { localKeys.accountId }</p>
-					<p>Using App Key: { localKeys.accessPublic }</p> */}
-					<input placeholder="Message" value={message} onChange={(e) => setMessage(e.target.value)} />
-					<br />
-					<input placeholder="Amount (N)" value={amount} onChange={(e) => setAmount(e.target.value)} />
-					<br />
-					<button onClick={() => handleCreateMessage()}>Create Message</button>
-				</>
-		}
-		{
+			/// wallet is signed in
 			account &&
             <>
-            	<h2>3b. Buy a Message</h2>
-                <p></p>
-            	Key: <input placeholder="Key" value={purchaseKey} onChange={(e) => setPurchaseKey(e.target.value)} />
+            	{
+            		tokenBalance !== '0' && <>
+            			<h2>Transfer Wrapped NEAR</h2>
+            			{/* <button onClick={() => handleWithdrawTokens()}>Withdraw Tokens</button> */}
+            			<p>Token Balance: {formatNearAmount(tokenBalance, 2)}</p>
+            			<input placeholder="Transfer Amount (N)" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} />
+            			<input placeholder="Receiver Account Id" value={receiver} onChange={(e) => setReceiver(e.target.value)} />
+            			<br />
+            			<button onClick={() => handleTransferTokens()}>Transfer Tokens</button>
+            		</>
+            	}
+
+            	<h2>Buy Wrapped NEAR</h2>
+            	<p>Token Contract is {contractName}</p>
             	<br />
-            	<button onClick={() => handleBuyMessage()}>Buy Message</button>
+            	<input placeholder="Amount (N)" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            	<br />
+            	<button onClick={() => handleBuyTokens()}>Buy Tokens</button>
+
             </>
 		}
-		
+
 	</>;
 };
 

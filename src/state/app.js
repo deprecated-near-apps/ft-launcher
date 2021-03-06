@@ -3,6 +3,7 @@ import { State } from '../utils/state';
 import { initNear } from './near';
 
 const initialState = {
+	tabIndex: 0,
 	app: {
 		mounted: false,
 	},
