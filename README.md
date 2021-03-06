@@ -6,6 +6,11 @@ This repo is a companion to this video:
 
 
 ## NOTE WIP: Server Side APIs and Tests
+
+- server side launching of token
+- server side adding of guest accounts to a special sub account of the token contract
+- server side reading of balances via API
+- more documentation
 # Background
 
 One of the issues with Social Tokens is that they start with zero value. A creator, artist or community might want to drop a bunch of tokens to their fans but the audience has (1) no crypto to pay for fees (2) no wallet (3) no concept of crypto or blockchain; prior to the drop. 
