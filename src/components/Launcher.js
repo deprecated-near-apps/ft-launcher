@@ -98,7 +98,7 @@ export const Launcher = ({ near, update, account, deployedToken, guestsAccount }
 			deployContract(contractBytes),
 			functionCall('new', newArgs, GAS)
 		];
-		account.signAndSendTransaction(accountId, actions);
+		await account.signAndSendTransaction(accountId, actions);
 		update('loading', false);
 	};
 

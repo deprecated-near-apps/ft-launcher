@@ -9,6 +9,7 @@ const {
 	DEFAULT_NEW_ACCOUNT_AMOUNT, 
 } = getConfig();
 
+const TEST_HOST = 'http://localhost:3000'
 /// exports
 async function initContract() {
 	/// try to call new on contract, swallow e if already initialized
@@ -128,6 +129,7 @@ const getSignature = async (account) => {
 };
 
 module.exports = { 
+    TEST_HOST,
 	near,
 	connection,
 	keyStore,
