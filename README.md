@@ -25,7 +25,7 @@ There's 3 main areas to explore and learn from:
 
 The tests are set up to auto generate the dev account each time you run `test:deploy` and the token account each time you run any test. **e.g. you will get a new token address each time you run a test**.
 
-This is just for testing. You can obvsiously deploy a token to a fixed address on testnet / mainnet, it's an easy config update.
+This is just for testing. You can obviously deploy a token to a fixed address on testnet / mainnet, it's an easy config update.
 
 #### Guests Account (key and tx gas sponsorship)
 When you run app / server tests. There's a contract deployed and a special account created `guests.OWNER_ACCOUNT_ID` to manage the sponsored users (the ones you will pay for gas fees while onboarding). This special "guests" account is different from the test guest account `bob.TOKEN_ID.OWNER_ACCOUNT_ID`. It is an account, different from the owner or token accounts, that manages the guests keys.
