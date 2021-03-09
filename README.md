@@ -11,21 +11,26 @@ This repo is a companion to this video:
 2. Deploy the contract and run the app tests: `yarn test:deploy`
 3. Start server and run server tests: `cd server && yarn start` then in another terminal `yarn test:server`
 
-### Notes
-
 If you only change the JS tests use `yarn test`.
 If you change the contract run `yarn test:deploy` again.
 If you run out of funds in the dev account run `yarn test:deploy` again.
 If you change the dev account (yarn test:deploy) the server should restart automatically, but you may need to restart the app and sign out/in again with NEAR Wallet.
-
 ### Moar Context
 
-When you run app / server tests. There's a contract deployed and a special account created `guests.OWNER_ACCOUNT_ID` to manage the sponsored users (the ones you will pay for gas fees while onboarding)
+There's 3 main areas to explore and learn from:
+- frontend only (use the app, sign in with NEAR wallet, deploy token contract, sign in as guest users, claim drops, transfer tokens, upgrade) as shown in the video
+- app.test.js (demos frontend only tests)
+- server.test.js (demos the server api, run server in background, and you can deploy token, add guests and transfer tokens via API calls vs. frontend)
+### Owner Account, Token Account, etc...
 
-This special "guests" account is different from the test guest account `bob.TOKEN_ID.OWNER_ACCOUNT_ID`
+The tests are set up to auto generate the dev account each time you run `test:deploy` and the token account each time you run any test. **e.g. you will get a new token address each time you run a test**.
 
-It is an account, different from the owner or token accounts, that manages the guests keys.
+This is just for testing. You can obvsiously deploy a token to a fixed address on testnet / mainnet, it's an easy config update.
 
+#### Guests Account (key and tx gas sponsorship)
+When you run app / server tests. There's a contract deployed and a special account created `guests.OWNER_ACCOUNT_ID` to manage the sponsored users (the ones you will pay for gas fees while onboarding). This special "guests" account is different from the test guest account `bob.TOKEN_ID.OWNER_ACCOUNT_ID`. It is an account, different from the owner or token accounts, that manages the guests keys.
+
+#### Guest Accounts
 The guest users can `claim_drop, ft_transfer_guest` and receive tokens from other users, e.g. in the server tests the owner transfers tokens to the guest account via API call and using client side code.
 
 Then, following the server tests, the guest transfers tokens to alice (who is a real NEAR account e.g. she pays her own gas).
