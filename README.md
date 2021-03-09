@@ -2,15 +2,22 @@
 
 This repo is a companion to this video:
 
-[![Live App Review 1 - App Access Keys](https://img.youtube.com/vi/7rG8fLAOepE/0.jpg)](https://www.youtube.com/watch?v=7rG8fLAOepE)
+[![Live App Review 13 - Social Token Drops with NO WALLET](https://img.youtube.com/vi/7rG8fLAOepE/0.jpg)](https://www.youtube.com/watch?v=7rG8fLAOepE)
 
 
-## NOTE WIP: Server Side APIs and Tests
+# Quickstart
 
-- server side launching of token
-- server side adding of guest accounts to a special sub account of the token contract
-- server side reading of balances via API
-- more documentation
+1. Install everything: `yarn && (cd server && yarn)`
+2. Deploy the contract and run the app tests: `yarn test:deploy`
+3. Run server tests: `yarn test:server`
+
+### Notes
+
+If you only change the JS tests use `yarn test`.
+If you change the contract run `yarn test:deploy` again.
+If you run out of funds in the dev account run `yarn test:deploy` again.
+If you change the dev account (yarn test:deploy) the server should restart automatically, but you may need to restart the app and sign out/in again with NEAR Wallet.
+
 # Background
 
 One of the issues with Social Tokens is that they start with zero value. A creator, artist or community might want to drop a bunch of tokens to their fans but the audience has (1) no crypto to pay for fees (2) no wallet (3) no concept of crypto or blockchain; prior to the drop. 
@@ -21,15 +28,7 @@ We do a demo of creating a "guest" named account for an app where the gas fees a
 
 This has many advantages for user onboarding, where users can use the app immediately and later can be upgraded to a full account. The users also don't have to move any assets - namely the fungible tokens they earned as a guest user. 
 
-# Quickstart
 
-1. Start the server: `cd server && yarn && yarn start`
-2. (back in root dir) Deploy the contract and run the app test: `yarn test:deploy`
-3. Start the app: `yarn start`
-
-If you only change the JS tests use `yarn test`.
-If you change the contract run `yarn test:deploy` again.
-Server should restart automatically, but you may need to restart the app.
 ## Installation
 
 Beyond having npm and node (latest versions), you should have Rust installed. I recommend nightly because living on the edge is fun.

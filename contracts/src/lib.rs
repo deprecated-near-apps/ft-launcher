@@ -139,6 +139,17 @@ impl Contract {
         let sender_id:ValidAccountId = self.get_predecessor().try_into().unwrap();
         let amount = amount.into();
         let balance = self.ft_balance_of(sender_id.clone()).into();
+
+
+        env::log(
+            format!(
+                "Balance {} Amount {} Sender {:?}",
+                balance, amount, sender_id.clone()
+            )
+            .as_bytes(),
+        );
+        
+
         assert!(amount < balance, "cannot transfer max balance");
         self.internal_transfer(&sender_id.into(), receiver_id.as_ref(), amount, memo);
     }

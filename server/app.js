@@ -7,11 +7,11 @@ const nearAPI = require('near-api-js');
 const getConfig = require('../src/config');
 const { withNear, hasAccessKey } = require('./middleware/near');
 const { near, ownerId, ownerAccount, ownerSecret } = require('./utils/near-utils');
-const { networkId, GAS, MIN_ATTACHED_BALANCE } = getConfig();
+const { networkId, GAS, MIN_ATTACHED_BALANCE, contractMethods, GUESTS_ACCOUNT_SECRET } = getConfig();
 const {
     KeyPair, Account,
     transactions: { deployContract, functionCall },
-	utils: { PublicKey, serialize: { base_encode } }
+	utils: { PublicKey, serialize: { base_encode }, format: { parseNearAmount } }
 } = nearAPI;
 
 const app = express();
@@ -28,39 +28,50 @@ const getDeterministic = (tokenName) => {
     return { keyPair, implicitAccountId }
 }
 
-// WARNING NO RESTRICTION ON THIS ENDPOINT
+/// WARNING NO RESTRICTION ON THIS ENDPOINT
 app.post('/launch-token', async (req, res) => {
     const {
-        total_supply,
+        totalSupply,
         name,
         symbol,
     } = req.body 
     
     /// TODO validate symbol and totalSupply
 
-    if (!name.indexOf(ownerId) === -1) {
-        return res.status(403).send({ error: `tokens must be subaccount e.g. "TOKEN_ID.${ownerId}"`, e});
+    if (name.indexOf(ownerId) !== -1) {
+        return res.status(403).send({ error: `tokens are by default subaccount of ${ownerId} you don't need to include this`});
     }
 
-    /// create token sub account with deterministic key from ownerSecret
-    const { keyPair } = getDeterministic(name)
+    const tokenId = name + '.' + ownerId
+    console.log('\nCreating Account:', tokenId)
+    /// get keyPair for token sub account with deterministic key from ownerSecret
+    const { keyPair } = getDeterministic(tokenId)
     try {
-        await ownerAccount.createAccount(name, keyPair.publicKey, MIN_ATTACHED_BALANCE);
+        await ownerAccount.createAccount(tokenId, keyPair.publicKey, MIN_ATTACHED_BALANCE);
     } catch(e) {
-        console.log(e);
+        console.warn(e);
+        return res.status(403).send({ error: `error creating token account`, e});
     }
 
-    /// setup signer for tokenAccount txs
-    near.connection.signer.keyStore.setKey(networkId, name, keyPair);
-    const tokenAccount = new Account(near.connection, name)
+    console.log('\nCreating Account:', 'guests.' + ownerId)
+    const guestKeyPair = KeyPair.fromString(GUESTS_ACCOUNT_SECRET)
+    /// create guests.TOKEN_NAME account with 1 N storage for managing guest users
+    try {
+        await ownerAccount.createAccount('guests.' + ownerId, guestKeyPair.publicKey, parseNearAmount('1'));
+    } catch(e) {
+        console.warn(e);
+        // return res.status(403).send({ error: `error creating guests account`, e});
+    }
 
+    /// deploy token contract
     const contractBytes = fs.readFileSync('../out/main.wasm');
     const newArgs = {
+        /// will have totalSupply minted to them
         owner_id: ownerId,
-        total_supply,
+        total_supply: totalSupply,
         name,
         symbol,
-        // not set by request
+        // not set by user request
         version: '1',
         reference: 'https://github.com/near/core-contracts/tree/master/w-near-141',
         reference_hash: '7c879fa7b49901d0ecc6ff5d64d7f673da5e4a5eb52a8d50a214175760d8919a',
@@ -70,27 +81,52 @@ app.post('/launch-token', async (req, res) => {
         deployContract(contractBytes),
         functionCall('new', newArgs, GAS)
     ];
+    /// setup signer for tokenAccount txs and sign tx
+    near.connection.signer.keyStore.setKey(networkId, tokenId, keyPair);
+    const tokenAccount = new Account(near.connection, tokenId)
+    console.log('\nDeploying Contract for:', tokenId)
     try {
-        const result = await tokenAccount.signAndSendTransaction(accountId, actions);
+        const result = await tokenAccount.signAndSendTransaction(tokenAccount.accountId, actions);
         res.json({ success: true, result });
     } catch(e) {
-        return res.status(403).send({ error: `something happened when deploying your token contract`, e});
+        console.warn(e)
+        return res.status(403).send({ error: `error deploying token contract`, e});
     }
 });
 
+/// WARNING NO RESTRICTION ON THIS ENDPOINT
+app.post('/add-guest', async (req, res) => {
+	const { account_id, public_key } = req.body;
+    const tokenId = account_id.substr(account_id.indexOf('.') + 1)
+    /// setup signer for guestAccount txs
+    const guestId = 'guests.' + ownerId
+    const guestKeyPair = KeyPair.fromString(GUESTS_ACCOUNT_SECRET)
+    near.connection.signer.keyStore.setKey(networkId, guestId, guestKeyPair);
+    const guestsAccount = new Account(near.connection, guestId)
+    /// try adding key to guestAccount and guest record to contract
+    console.log('\nAdding guest account:', account_id)
+	try {
+		const addKey = await guestsAccount.addKey(public_key, tokenId, contractMethods.changeMethods, parseNearAmount('0.1'));
+		const add_guest = await ownerAccount.functionCall(tokenId, 'add_guest', { account_id, public_key }, GAS);
+		res.json({ success: true, result: { addKey, add_guest } });
+	} catch(e) {
+		console.log(e);
+		return res.status(403).send({ error: `error adding guest`, e});
+	}
+});
 
-// // WARNING NO RESTRICTION ON THIS ENDPOINT
-// app.post('/add-guest', async (req, res) => {
-// 	const { account_id, public_key } = req.body;
-// 	try {
-// 		const addKey = await guestAccount.addKey(public_key, ownerId, contractMethods.changeMethods, parseNearAmount('0.1'));
-// 		const add_guest = await contract.add_guest({ account_id, public_key }, GAS);
-// 		res.json({ addKey, add_guest });
-// 	} catch(e) {
-// 		console.log(e);
-// 		return res.status(403).send({ error: `key is already added`, e});
-// 	}
-// });
+/// WARNING NO RESTRICTION ON THIS ENDPOINT
+app.post('/transfer-tokens', async (req, res) => {
+	const { tokenId, receiver_id, amount } = req.body;
+    console.log('\nTransfering tokens to:', receiver_id, amount)
+    try {
+		const result = await ownerAccount.functionCall(tokenId, 'ft_transfer', { receiver_id, amount }, GAS, 1);
+		res.json({ success: true, result });
+	} catch(e) {
+		console.log(e);
+		return res.status(403).send({ error: `error with transfer`, e});
+	}
+});
 
 app.post('/has-access-key', hasAccessKey, (req, res) => {
 	res.json({ success: true });
