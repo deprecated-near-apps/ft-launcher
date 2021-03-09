@@ -7,6 +7,8 @@ This repo is a companion to this video:
 
 # Quickstart
 
+Install Rust https://rustup.rs/
+
 1. Install everything: `yarn && (cd server && yarn)`
 2. Deploy the contract and run the app tests: `yarn test:deploy`
 3. Start server and run server tests: `cd server && yarn start` then in another terminal from the root `yarn test:server`
