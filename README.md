@@ -18,6 +18,21 @@ If you change the contract run `yarn test:deploy` again.
 If you run out of funds in the dev account run `yarn test:deploy` again.
 If you change the dev account (yarn test:deploy) the server should restart automatically, but you may need to restart the app and sign out/in again with NEAR Wallet.
 
+### Moar Context
+
+When you run app / server tests. There's a contract deployed and a special account created `guests.OWNER_ACCOUNT_ID` to manage the sponsored users (the ones you will pay for gas fees while onboarding)
+
+This special "guests" account is different from the test guest account `bob.TOKEN_ID.OWNER_ACCOUNT_ID`
+
+It is an account, different from the owner or token accounts, that manages the guests keys.
+
+The guest users can `claim_drop, ft_transfer_guest` and receive tokens from other users, e.g. in the server tests the owner transfers tokens to the guest account via API call and using client side code.
+
+Then, following the server tests, the guest transfers tokens to alice (who is a real NEAR account e.g. she pays her own gas).
+
+Finally, the guest upgrades themselves to a real NEAR account, something demoed in the video.
+
+It's a lot to digest but if you focus on the `/test/app.test.js` and `/test/server.test.js` you will start to see the patterns.
 # Background
 
 One of the issues with Social Tokens is that they start with zero value. A creator, artist or community might want to drop a bunch of tokens to their fans but the audience has (1) no crypto to pay for fees (2) no wallet (3) no concept of crypto or blockchain; prior to the drop. 
