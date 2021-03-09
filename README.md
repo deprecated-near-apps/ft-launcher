@@ -9,7 +9,7 @@ This repo is a companion to this video:
 
 1. Install everything: `yarn && (cd server && yarn)`
 2. Deploy the contract and run the app tests: `yarn test:deploy`
-3. Start server and run server tests: `cd server && yarn start` then in another terminal `yarn test:server`
+3. Start server and run server tests: `cd server && yarn start` then in another terminal from the root `yarn test:server`
 
 If you only change the JS tests use `yarn test`.
 If you change the contract run `yarn test:deploy` again.
