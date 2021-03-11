@@ -13,15 +13,16 @@ Install Rust https://rustup.rs/
 Install near-cli: `npm i -g near-cli`
 Create testnet account: [Wallet](https://wallet.testnet.near.org)
 Login: `near login`
-
+#### Installing and Running Tests for this Example
 1. Install everything: `yarn && (cd server && yarn)`
 2. Deploy the contract and run the app tests: `yarn test:deploy`
 3. Start server and run server tests: `cd server && yarn start` then in another terminal from the root `yarn test:server`
 
-If you only change the JS tests use `yarn test`.
-If you change the contract run `yarn test:deploy` again.
-If you run out of funds in the dev account run `yarn test:deploy` again.
-If you change the dev account (yarn test:deploy) the server should restart automatically, but you may need to restart the app and sign out/in again with NEAR Wallet.
+#### Notes
+- If you ONLY change the JS tests use `yarn test`.
+- If you change the contract run `yarn test:deploy` again.
+- If you run out of funds in the dev account run `yarn test:deploy` again.
+- If you change the dev account (yarn test:deploy) the server should restart automatically, but you may need to restart the app and sign out/in again with NEAR Wallet.
 ### Moar Context
 
 There's 3 main areas to explore and learn from:
