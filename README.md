@@ -11,9 +11,7 @@ This repo is a companion to this video:
 Install Rust https://rustup.rs/
 #### If you have never used near-cli
 Install near-cli: `npm i -g near-cli`
-
 Create testnet account: [Wallet](https://wallet.testnet.near.org)
-
 Login: `near login`
 #### Installing and Running Tests for this Example
 1. Install everything: `yarn && (cd server && yarn)`
