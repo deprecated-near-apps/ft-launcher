@@ -7,7 +7,12 @@ This repo is a companion to this video:
 
 # Quickstart
 
+#### If you don't have Rust
 Install Rust https://rustup.rs/
+#### If you have never used near-cli
+Install near-cli: `npm i -g near-cli`
+Create testnet account: [Wallet](https://wallet.testnet.near.org)
+Login: `near login`
 
 1. Install everything: `yarn && (cd server && yarn)`
 2. Deploy the contract and run the app tests: `yarn test:deploy`

@@ -43,7 +43,7 @@ static ALLOC: near_sdk::wee_alloc::WeeAlloc<'_> = near_sdk::wee_alloc::WeeAlloc:
 pub struct Contract {
     pub owner_id: AccountId,
     pub drop_amount: Balance,
-
+    
     /// PublicKey -> AccountId.
     pub guests: LookupMap<PublicKey, AccountId>,
 
