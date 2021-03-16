@@ -183,14 +183,3 @@ export const Launcher = ({ near, update, account, deployedToken, guestsAccount }
 		}
 	</>;
 };
-
-
-// /// WARNING THIS ENDPOINT NOT PROTECTED
-// let result
-// try {
-//     result = await postJson({
-//         url: 'http://localhost:3000/launch-token',
-//     });
-// } catch (e) {
-//     console.log(e)
-// }

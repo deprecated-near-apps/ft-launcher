@@ -11,6 +11,9 @@ const {
 export const Wallet = ({ wallet, account, update, deployedToken }) => {
 
     const [tokenBalance, setTokenBalance] = useState() 
+    const [receiver, setReceiver] = useState('');
+    const [amount, setAmount] = useState('');
+    const [pop, setPop] = useState(false);
 
     useEffect(() => {
         if (account && deployedToken) updateWallet()
@@ -21,14 +24,25 @@ export const Wallet = ({ wallet, account, update, deployedToken }) => {
         setTokenBalance(formatNearAmount(await account.viewFunction(deployedToken.accountId, 'ft_balance_of', { account_id: account.accountId }) || '0'));
     }
 
+    
+
     const handleTransfer = async () => {
-        const receiver_id = window.prompt('receiver_id?')
-        const amount = parseNearAmount(window.prompt('amount?'))
+        const receiver_id = receiver
+        const transfer_amount = parseNearAmount(amount)
         if (!receiver_id.length || !amount.length) return
         update('loading', true);
-        await account.functionCall(deployedToken.accountId, 'ft_transfer_guest', { receiver_id, amount }, GAS);
+        await account.functionCall(deployedToken.accountId, 'ft_transfer_guest', { receiver_id, amount: transfer_amount }, GAS);
         updateWallet()
         update('loading', false);
+    }
+
+    if (pop) {
+        return <div className="modal">
+			<input placeholder="receiver" value={receiver} onChange={(e) => setReceiver(e.target.value)} />
+			<input placeholder="amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            <button onClick={() => handleTransfer()}>Transfer</button>
+            <button onClick={() => setPop(false)}>Back</button>
+		</div>;
     }
 
 	if (wallet && wallet.signedIn) {
@@ -37,7 +51,7 @@ export const Wallet = ({ wallet, account, update, deployedToken }) => {
 			<p>Signed In: { account.accountId }</p>
 			<p>Balance NEAR: { wallet.balance }</p>
 			<p>Balance Tokens: { tokenBalance || '0' }</p>
-            <button onClick={() => handleTransfer()}>Transfer</button>
+            <button onClick={() => setPop(true)}>Transfer</button>
             <br/>
             <br/>
 			<button onClick={() => wallet.signOut()}>Sign Out</button>

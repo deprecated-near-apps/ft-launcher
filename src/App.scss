@@ -15,6 +15,7 @@ body {
     height: 100vh;
     overflow-y: scroll;
     font-family: 'Inter', sans-serif !important;
+    font-size: 1.2em;
 }
 
 body::-webkit-scrollbar {
@@ -31,7 +32,7 @@ body::-webkit-scrollbar {
     } 
   } 
 
-.loading {
+.loading, .insta {
     width: 100%;
     max-width: $width;
     height: 100vh;
@@ -45,12 +46,19 @@ body::-webkit-scrollbar {
     align-items: center;
     text-align: center;
     img {
+        width: 300px;
+    }
+}
+.loading {
+    img {
         animation-name: spinner; 
         animation-timing-function: linear; 
         animation-iteration-count: infinite; 
         animation-duration: 2s; 
-        width: 300px;
     }
+}
+.modal {
+    display:block;
 }
 
 #root {
@@ -74,7 +82,7 @@ body::-webkit-scrollbar {
     align-items: center;
     text-align: center;
     > div {
-        width: 33.3%;
+        flex-grow: 1;
         height: 64px;
         line-height: 64px;
         &.active {
@@ -175,10 +183,11 @@ button, input {
     font-family: 'Inter', sans-serif !important;
     cursor: pointer;
     outline: none !important;
+    font-size: 1em;
 }
 
 button {
-    margin: 8px;
+    margin: 8px 8px 8px 0;
     &:hover {
         background: #FFB259;
     }
