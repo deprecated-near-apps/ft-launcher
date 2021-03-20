@@ -43,6 +43,7 @@ static ALLOC: near_sdk::wee_alloc::WeeAlloc<'_> = near_sdk::wee_alloc::WeeAlloc:
 pub struct Contract {
     pub owner_id: AccountId,
     pub drop_amount: Balance,
+    pub continuous: bool,
     
     /// PublicKey -> AccountId.
     pub guests: LookupMap<PublicKey, AccountId>,
@@ -68,7 +69,7 @@ impl Default for Contract {
 #[near_bindgen]
 impl Contract {
     #[init]
-    pub fn new(owner_id: ValidAccountId, total_supply: U128, version: String, name: String, symbol: String, reference: String, reference_hash: String, decimals: u8) -> Self {
+    pub fn new(owner_id: ValidAccountId, total_supply: U128, version: String, name: String, symbol: String, reference: String, reference_hash: String, decimals: u8, continuous: bool) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         let ref_hash_result: Result<Vec<u8>, ParseIntError> = (0..reference_hash.len())
             .step_by(2)
@@ -79,6 +80,7 @@ impl Contract {
         let mut this = Self {
             owner_id: owner_id.clone().into(),
             drop_amount: DROP_DEFAULT,
+            continuous,
             guests: LookupMap::new(b"g".to_vec()),
             accounts: LookupMap::new(b"a".to_vec()),
             total_supply: total_supply.into(),
@@ -106,6 +108,16 @@ impl Contract {
 
     /// Custom Methods for Social Token Drops
 
+    /// only owner can mint
+    pub fn mint(&mut self, amount: U128) {
+        assert!(env::predecessor_account_id() == self.owner_id, "must be owner_id");
+        assert_eq!(self.continuous, true, "must be continuous mint token");
+        self.total_supply += u128::from(amount);
+        let mut balance = self.accounts.get(&self.owner_id).expect("owner should have balance");
+        balance += u128::from(amount);
+        self.accounts.insert(&self.owner_id, &balance);
+    }
+
     /// looks for guest key in custom guests.CONTRACT_ACCOUNT_ID sub account
     pub fn get_predecessor(&mut self) -> AccountId {
         let predecessor = env::predecessor_account_id();
@@ -129,6 +141,7 @@ impl Contract {
         }
     }
 
+    /// change the default drop amount any added guest can claim
     pub fn update_drop_amount(&mut self, amount: U128) {
         assert!(env::predecessor_account_id() == self.owner_id, "must be owner_id");
         self.drop_amount = amount.into();
@@ -140,7 +153,6 @@ impl Contract {
         let amount = amount.into();
         let balance = self.ft_balance_of(sender_id.clone()).into();
 
-
         env::log(
             format!(
                 "Balance {} Amount {} Sender {:?}",
@@ -149,11 +161,11 @@ impl Contract {
             .as_bytes(),
         );
         
-
         assert!(amount < balance, "cannot transfer max balance");
         self.internal_transfer(&sender_id.into(), receiver_id.as_ref(), amount, memo);
     }
 
+    /// any added guest (by the owner can claim this drop)
     pub fn claim_drop(&mut self) {
         let receiver_id:ValidAccountId = self.guests.get(&env::signer_account_pk()).expect("not a guest").try_into().unwrap();
         let balance:u128 = self.ft_balance_of(receiver_id.clone()).into();
@@ -162,7 +174,7 @@ impl Contract {
         self.internal_transfer(&self.owner_id.clone().into(), &receiver_id.into(), amount, None);
     }
     
-    /// 
+    /// maybe for banning???
     pub fn remove_guest(&mut self, public_key: Base58PublicKey) {
         assert!(env::predecessor_account_id() == self.owner_id, "must be owner_id");
         let account_id = self.guests.get(&public_key.clone().into()).expect("not a guest");
@@ -199,7 +211,6 @@ impl Contract {
             )
             .transfer(FUNDING_AMOUNT)
             .then(ext_self::on_account_created(
-                account_id,
                 pk,
                 
                 &env::current_account_id(),
@@ -209,7 +220,7 @@ impl Contract {
     }
 
     /// after the account is created we'll delete all the guests activity
-    pub fn on_account_created(&mut self, account_id: AccountId, public_key: PublicKey) -> bool {
+    pub fn on_account_created(&mut self, public_key: PublicKey) -> bool {
         let creation_succeeded = is_promise_success();
         if creation_succeeded {
             self.guests.remove(&public_key);
@@ -227,7 +238,7 @@ impl Contract {
 /// Callback for after upgrade_guest
 #[ext_contract(ext_self)]
 pub trait ExtContract {
-    fn on_account_created(&mut self, account_id: AccountId, public_key: PublicKey) -> bool;
+    fn on_account_created(&mut self, public_key: PublicKey) -> bool;
 }
 
 fn is_promise_success() -> bool {

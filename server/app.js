@@ -34,6 +34,7 @@ app.post('/launch-token', async (req, res) => {
         totalSupply,
         name,
         symbol,
+        continuous = false,
     } = req.body 
     
     /// TODO validate symbol and totalSupply
@@ -75,8 +76,10 @@ app.post('/launch-token', async (req, res) => {
         version: '1',
         reference: 'https://github.com/near/core-contracts/tree/master/w-near-141',
         reference_hash: '7c879fa7b49901d0ecc6ff5d64d7f673da5e4a5eb52a8d50a214175760d8919a',
-        decimals: 24
+        decimals: 24,
+        continuous,
     };
+    console.log(newArgs)
     const actions = [
         deployContract(contractBytes),
         functionCall('new', newArgs, GAS)
@@ -96,8 +99,7 @@ app.post('/launch-token', async (req, res) => {
 
 /// WARNING NO RESTRICTION ON THIS ENDPOINT
 app.post('/add-guest', async (req, res) => {
-	const { account_id, public_key } = req.body;
-    const tokenId = account_id.substr(account_id.indexOf('.') + 1)
+	const { tokenId, account_id, public_key } = req.body;
     /// setup signer for guestAccount txs
     const guestId = 'guests.' + ownerId
     const guestKeyPair = KeyPair.fromString(GUESTS_ACCOUNT_SECRET)
@@ -110,7 +112,7 @@ app.post('/add-guest', async (req, res) => {
 		const add_guest = await ownerAccount.functionCall(tokenId, 'add_guest', { account_id, public_key }, GAS);
 		res.json({ success: true, result: { addKey, add_guest } });
 	} catch(e) {
-		console.log(e);
+		console.warn(e);
 		return res.status(403).send({ error: `error adding guest`, e});
 	}
 });
@@ -123,13 +125,48 @@ app.post('/transfer-tokens', async (req, res) => {
 		const result = await ownerAccount.functionCall(tokenId, 'ft_transfer', { receiver_id, amount }, GAS, 1);
 		res.json({ success: true, result });
 	} catch(e) {
-		console.log(e);
+		console.warn(e);
 		return res.status(403).send({ error: `error with transfer`, e});
 	}
 });
 
-app.post('/has-access-key', hasAccessKey, (req, res) => {
-	res.json({ success: true });
+/// WARNING NO RESTRICTION ON THIS ENDPOINT
+app.post('/mint', async (req, res) => {
+	const { tokenId, amount } = req.body;
+    console.log('\nMinting new tokens to:', ownerId, amount)
+    try {
+		const result = await ownerAccount.functionCall(tokenId, 'mint', { amount }, GAS);
+		res.json({ success: true, result });
+	} catch(e) {
+		console.warn(e);
+		return res.status(403).send({ error: `error with transfer`, e});
+	}
+});
+
+/// View only methods
+
+app.post('/balance-of', async (req, res) => {
+	const { tokenId, accountId } = req.body;
+    try {
+		const balance = await ownerAccount.viewFunction(tokenId, 'ft_balance_of', { account_id: accountId }, GAS);
+        console.log('\nBalance of:', accountId, balance)
+		res.json({ success: true, balance });
+	} catch(e) {
+		console.warn(e);
+		return res.status(403).send({ error: `error with transfer`, e});
+	}
+});
+
+app.post('/total-supply', async (req, res) => {
+	const { tokenId } = req.body;
+    try {
+		const supply = await ownerAccount.viewFunction(tokenId, 'ft_total_supply', {}, GAS);
+        console.log('\nTotal supply of:', tokenId, supply)
+		res.json({ success: true, supply });
+	} catch(e) {
+		console.warn(e);
+		return res.status(403).send({ error: `error with transfer`, e});
+	}
 });
 
 app.listen(port, () => {

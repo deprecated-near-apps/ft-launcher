@@ -39,6 +39,7 @@
         "test:deploy": "yarn dev:deploy && yarn test",
         "test": "REACT_APP_ENV=dev jest app.test.js --useStderr",
         "test:server": "REACT_APP_ENV=dev jest server.test.js --useStderr",
+        "test:server:deploy": "yarn dev:deploy && yarn test:server",
         "deploy": "REACT_APP_ENV=prod yarn build && cp -a static/* dist && gh-pages -d dist"
     },
     "jest": {
