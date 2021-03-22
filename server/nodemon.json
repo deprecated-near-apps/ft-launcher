@@ -5,5 +5,7 @@
       "./middleware",
       "../src/config.js"
     ],
+    
     "verbose": true
+
   }
