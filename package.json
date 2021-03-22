@@ -37,6 +37,7 @@
         "dev:deploy": "yarn build:contracts && rm -rf neardev && (near dev-deploy || exit 0) && yarn patch:config",
         "test:unit": "(cd contracts && cargo test -- --nocapture --color always)",
         "test:deploy": "yarn dev:deploy && yarn test",
+        "profile": "REACT_APP_ENV=dev jest profile.test.js --useStderr",
         "test": "REACT_APP_ENV=dev jest app.test.js --useStderr",
         "test:server": "REACT_APP_ENV=dev jest server.test.js --useStderr",
         "test:server:deploy": "yarn dev:deploy && yarn test:server",
