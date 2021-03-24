@@ -10,8 +10,13 @@ const {
 } = getConfig();
 
 const TEST_HOST = 'http://localhost:3000'
+let storageCostPerByte = new BN('10000000000000000000')
+
+const getCostPerByte = () => storageCostPerByte
 /// exports
 async function initContract() {
+	const protocolConfig = await connection.provider.experimental_protocolConfig({ finality: 'final' });
+	storageCostPerByte = new BN(protocolConfig.runtime_config.storage_amount_per_byte) || storageCostPerByte
 	/// try to call new on contract, swallow e if already initialized
 	try {
         const newArgs = {
@@ -35,6 +40,7 @@ async function initContract() {
 	return { contract, contractName };
 }
 const getAccountBalance = async (accountId) => (new nearAPI.Account(connection, accountId)).getAccountBalance();
+const getAccountState = async (accountId) => (new nearAPI.Account(connection, accountId)).state();
 
 const createOrInitAccount = async(accountId, secret) => {
 	let account;
@@ -130,12 +136,14 @@ const getSignature = async (account) => {
 };
 
 module.exports = { 
+	getCostPerByte,
     TEST_HOST,
 	near,
 	connection,
 	keyStore,
 	getContract,
 	getAccountBalance,
+	getAccountState,
 	contract,
 	contractName,
 	contractMethods,
