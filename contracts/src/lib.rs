@@ -1,4 +1,5 @@
 
+#![feature(str_split_once)]
 /**
 * Fungible Token NEP-141 Token contract
 *
