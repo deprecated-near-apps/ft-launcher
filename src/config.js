@@ -1,4 +1,4 @@
-const contractName = 'dev-1616450777510-3528316';
+const contractName = 'dev-1617294637248-3968382';
 
 module.exports = function getConfig(isServer = false) {
 	let config = {

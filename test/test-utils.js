@@ -9,17 +9,17 @@ const {
 	DEFAULT_NEW_ACCOUNT_AMOUNT, 
 } = getConfig();
 
-const TEST_HOST = 'http://localhost:3000'
-let storageCostPerByte = new BN('10000000000000000000')
+const TEST_HOST = 'http://localhost:3000';
+let storageCostPerByte = new BN('10000000000000000000');
 
-const getCostPerByte = () => storageCostPerByte
+const getCostPerByte = () => storageCostPerByte;
 /// exports
 async function initContract() {
 	const protocolConfig = await connection.provider.experimental_protocolConfig({ finality: 'final' });
-	storageCostPerByte = new BN(protocolConfig.runtime_config.storage_amount_per_byte) || storageCostPerByte
+	storageCostPerByte = new BN(protocolConfig.runtime_config.storage_amount_per_byte) || storageCostPerByte;
 	/// try to call new on contract, swallow e if already initialized
 	try {
-        const newArgs = {
+		const newArgs = {
 			owner_id: contractAccount.accountId,
 			total_supply: parseNearAmount('1000000'),
 			name: 'Test',
@@ -137,7 +137,7 @@ const getSignature = async (account) => {
 
 module.exports = { 
 	getCostPerByte,
-    TEST_HOST,
+	TEST_HOST,
 	near,
 	connection,
 	keyStore,

@@ -29,5 +29,5 @@ module.exports = {
 	connection,
 	ownerId,
 	ownerAccount,
-    ownerSecret: credentials.private_key,
+	ownerSecret: credentials.private_key,
 };

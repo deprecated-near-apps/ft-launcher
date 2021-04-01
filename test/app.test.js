@@ -33,7 +33,7 @@ describe('deploy contract ' + contractName, () => {
 	beforeAll(async () => {
 	    const { contract: launchContract } = await initContract();
 
-        const tokenId = contractAccount.accountId
+		const tokenId = contractAccount.accountId;
 
 		/// contract is the token contract now and contractAccount is the owner
 		contract = await getTokenContract(contractAccount, tokenId);

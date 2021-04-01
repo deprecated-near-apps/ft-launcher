@@ -1,5 +1,5 @@
 
-const BN = require('bn.js')
+const BN = require('bn.js');
 const nearAPI = require('near-api-js');
 const testUtils = require('./test-utils');
 const profileUtils = require('./profile-utils');
@@ -8,16 +8,16 @@ const getConfig = require('../src/config');
 const { Contract, KeyPair, utils: { format: { parseNearAmount, formatNearAmount }} } = nearAPI;
 const { 
 	connection, initContract, contractAccount, contractName, contractMethods, 
-	createOrInitAccount,
+	createOrInitAccount, getAccount,
 } = testUtils;
 const { 
 	getCosts,
 	setMark,
-    getBurn,
+	getBurn,
 	getStorage,
-    getBurnAndStorage,
-    startRecording,
- } = profileUtils;
+	getBurnAndStorage,
+	startRecording,
+} = profileUtils;
 const { 
 	networkId, GAS, GUESTS_ACCOUNT_SECRET
 } = getConfig();
@@ -34,13 +34,21 @@ const getTokenContract = (account, token_account_id) => {
 
 describe('deploy contract ' + contractName, () => {
 
-	let bobId, contractBob, contract;
+	let alice, aliceId, storageMinimum, bobId, contractBob, contract;
 
 	beforeAll(async () => {
 	    const { contract: contractInstance } = await initContract();
-		contract = contractInstance
+		contract = contractInstance;
 
-        const tokenId = contractAccount.accountId
+		const tokenId = contractAccount.accountId;
+
+		alice = await getAccount();
+		aliceId = alice.accountId;
+		console.log('\n\n Alice accountId:', aliceId, '\n\n');
+
+		/// find out how much needed to store for FTs
+		storageMinimum = await contractAccount.viewFunction(contractName, 'storage_minimum_balance');
+		console.log('\n\n storageMinimum:', storageMinimum, '\n\n');
 
 		/// create guest account for bob
 		bobId = 'g' + Date.now() + '.' + tokenId;
@@ -49,15 +57,15 @@ describe('deploy contract ' + contractName, () => {
 		const public_key = keyPair.publicKey.toString();
 		const guestAccount = await createOrInitAccount(guestId, GUESTS_ACCOUNT_SECRET);
 
-		startRecording()
-		await setMark(guestId)
+		startRecording();
+		await setMark(guestId);
 		await guestAccount.addKey(public_key, tokenId, contractMethods.changeMethods, parseNearAmount('0.1'));
-		await getBurn(guestId)
+		await getBurn(guestId);
 
 		try {
-			await setMark(contractName)
+			await setMark(contractName);
 			await contract.add_guest({ account_id: bobId, public_key }, GAS);
-			await getBurnAndStorage(contractName)
+			await getBurnAndStorage(contractName);
 		} catch(e) {
 			console.warn(e);
 		}
@@ -68,28 +76,53 @@ describe('deploy contract ' + contractName, () => {
 		console.log(guest);
 	});
 
-	test('claim drop', async () => {
-		await setMark(guestId)
-		await contractBob.claim_drop({});
-		await getBurn(guestId)
-
-		console.log('\n\n total cost of guest claiming drop:', formatNearAmount(getCosts(), 12), '\n\n');
+	test('alice gets 100 fts', async () => {
+		await alice.functionCall(contractName, 'storage_deposit', {}, GAS, storageMinimum);
+		let amount = parseNearAmount('100');
+		await contractAccount.functionCall(contractName, 'ft_transfer', {
+			receiver_id: aliceId,
+			amount
+		}, GAS, 1);
+		/// check balance
+		const balance = await contractAccount.viewFunction(contractName, 'ft_balance_of', { account_id: aliceId });
+		expect(balance).toEqual(amount);
 	});
 
-	test('measure 10 owner transfers', async () => {
-		const amount = parseNearAmount('1')
-		for (let i = 0; i < 10; i++) {
-			await setMark(contractName)
+	test('measure 1 alice ft_transfer', async () => {
+		const amount = parseNearAmount('1');
+		for (let i = 0; i < 1; i++) {
+			await setMark(aliceId);
+			await alice.functionCall(contractName, 'ft_transfer', { 
+				receiver_id: bobId,
+				amount
+			 }, GAS, 1);
+			await getBurn(aliceId, 'aliceTxs');
+		}
+		console.log('\n\n 1 alice ft_transfer:', formatNearAmount(getCosts('aliceTxs'), 12), '\n\n');
+	});
+
+	test('measure 1 owner transfers', async () => {
+		const amount = parseNearAmount('1');
+		for (let i = 0; i < 1; i++) {
+			await setMark(contractName);
 			await contract.ft_transfer({ 
 				receiver_id: bobId,
 				amount
 			 }, GAS, 1);
-			await getBurn(contractName, 'ownertxs')
+			await getBurn(contractName, 'ownertxs');
 		}
-		console.log('\n\n 10 owner transfers:', formatNearAmount(getCosts('ownertxs'), 12), '\n\n');
+		console.log('\n\n 1 owner transfers:', formatNearAmount(getCosts('ownertxs'), 12), '\n\n');
 	});
 
-	test('bob upgrades self', async () => {
+	test('claim drop', async () => {
+		await setMark(guestId);
+		await contractBob.claim_drop({});
+		await getBurn(guestId);
+
+		console.log('\n\n total cost of guest claiming drop:', formatNearAmount(getCosts(), 12), '\n\n');
+	});
+
+	test('bob upgrades self from guest to real account', async () => {
 		const keyPair = KeyPair.fromRandom('ed25519');
 		const keyPair2 = KeyPair.fromRandom('ed25519');
 		const public_key = keyPair.publicKey.toString();
@@ -97,16 +130,16 @@ describe('deploy contract ' + contractName, () => {
 
 		/// gas burnt on guest contract
 		/// storage released (neg) on main contract
-		await setMark(guestId)
-		await setMark(contractName)
+		await setMark(guestId);
+		await setMark(contractName);
 		const result = await contractBob.upgrade_guest({
 			public_key,
 			access_key: public_key2,
 			method_names: '',
 		}, GAS);
 		console.log('RESULT', result);
-		await getBurn(guestId)
-		await getStorage(contractName)
+		await getBurn(guestId);
+		await getStorage(contractName);
 		
 		/// update account and contract for bob (bob now pays gas)
 		connection.signer.keyStore.setKey(networkId, bobId, keyPair);

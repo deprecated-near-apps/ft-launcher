@@ -11,22 +11,22 @@ export const {
 
 const {
 	Account,
-    KeyPair,
+	KeyPair,
 	Contract,
 	InMemorySigner,
 } = nearAPI;
 
-let near
+let near;
 
 export function getContract(account) {
 	return new Contract(account, contractName, { ...contractMethods });
 }
 
 export const setSignerFromSeed = async (accountId, seedPhrase) => {
-    const { secretKey } = parseSeedPhrase(seedPhrase);
-    const keyPair = KeyPair.fromString(secretKey);
-    near.connection.signer.keyStore.setKey(networkId, accountId, keyPair);
-}
+	const { secretKey } = parseSeedPhrase(seedPhrase);
+	const keyPair = KeyPair.fromString(secretKey);
+	near.connection.signer.keyStore.setKey(networkId, accountId, keyPair);
+};
 
 export const getWallet = async () => {
 	near = await nearAPI.connect({

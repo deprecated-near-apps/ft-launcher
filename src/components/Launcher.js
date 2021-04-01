@@ -9,12 +9,12 @@ import {
 	contractName,
 	getContract,
 	isAccountTaken,
-    setSignerFromSeed,
+	setSignerFromSeed,
 	MIN_ATTACHED_BALANCE,
 } from '../utils/near-utils';
 import BN from 'bn.js';
 
-import {GUEST_ACCOUNTS} from './Guest'
+import {GUEST_ACCOUNTS} from './Guest';
 const TEMP_OWNER = '__TEMP_OWNER';
 const TEMP_GUEST = '__TEMP_GUEST';
 
@@ -58,13 +58,13 @@ export const Launcher = ({ near, update, account, deployedToken, guestsAccount }
 		}
 		const account = new Account(near.connection, accountId);
 
-        setSignerFromSeed(accountId, seedPhrase)
+		setSignerFromSeed(accountId, seedPhrase);
 
 		const state = await account.state();
 		if (state.code_hash !== '11111111111111111111111111111111') {
 			let guestsAccount = get(TEMP_GUEST);
 			if (guestsAccount.seedPhrase) {
-                setSignerFromSeed(guestsAccount.accountId, guestsAccount.seedPhrase)
+				setSignerFromSeed(guestsAccount.accountId, guestsAccount.seedPhrase);
 			} else {
 				guestsAccount = null;
 			}
@@ -177,7 +177,7 @@ export const Launcher = ({ near, update, account, deployedToken, guestsAccount }
 						del(TEMP_OWNER);
 						del(TEMP_GUEST);
 						del(GUEST_ACCOUNTS);
-                        window.location.reload()
+						window.location.reload();
 					}}>Delete Token</button>
 				</>
 		}

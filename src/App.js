@@ -32,8 +32,8 @@ const App = () => {
 		</div>;
 	}
 
-    if (window.location.href.indexOf('drop') > 0) {
-        return <div className="root">
+	if (window.location.href.indexOf('drop') > 0) {
+		return <div className="root">
 
 			<div className="tab-controls">
 				{
@@ -65,12 +65,12 @@ const App = () => {
 			</div>
 
 			
-            <div className={['tab', tabIndex === 2 ? 'active' : ''].join(' ')}>
-                <Launcher {...{ near, update, account, deployedToken, guestsAccount }} />
-            </div>
+			<div className={['tab', tabIndex === 2 ? 'active' : ''].join(' ')}>
+				<Launcher {...{ near, update, account, deployedToken, guestsAccount }} />
+			</div>
 			
-		</div>
-    }
+		</div>;
+	}
 
 	return (
 		<div className="root">
